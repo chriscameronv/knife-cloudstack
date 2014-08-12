@@ -36,6 +36,8 @@ module KnifeCloudstack
     # Seconds to wait between ssh pings
     SSH_POLL_INTERVAL = 10
 
+    attr_accessor :public_ip, :server
+
     deps do
       require 'chef/knife/bootstrap'
       require 'chef/knife/bootstrap_windows_winrm'
@@ -297,6 +299,9 @@ module KnifeCloudstack
 
       config[:public_ip] = false if zone['networktype'] == 'Basic'
       public_ip = find_or_create_public_ip(server, connection)
+      @public_ip = public_ip
+      @server = server
+      @server_id = server['id']
 
       object_fields = []
       object_fields << ui.color("Name:", :cyan)
