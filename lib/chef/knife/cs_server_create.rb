@@ -84,6 +84,18 @@ module KnifeCloudstack
            :proc => lambda { |n| n.split(',').map {|sn| sn.strip}} ,
            :default => []
 
+    option :cloudstack_securitygroupnames,
+           :long => "--securitygroupnames SECURITYGROUPNAMES",
+           :description => "Comma separated list of CloudStack Security Group names",
+           :proc => lambda { |q| n.split(',').map {|sn| sn.strip}} ,
+           :default => []
+
+    option :cloudstack_securitygroupids,
+           :long => "--securitygroupids SECURITYGROUPIDS",
+           :description => "Comma separated list of CloudStack Security Group Ids",
+           :proc => lambda { |q| n.split(',').map {|sn| sn.strip}} ,
+           :default => []
+
     option :cloudstack_disk,
            :short => "-D DISK",
            :long => "--disk DISK",
@@ -250,7 +262,7 @@ module KnifeCloudstack
       end
       validate_options
 
-      # This little peace of code sets the Chef node-name to the VM name when a node-name is not specifically given
+      # This little piece of code sets the Chef node-name to the VM name when a node-name is not specifically given
       unless locate_config_value :chef_node_name
         config[:chef_node_name] = @name_args.first
       end
@@ -272,7 +284,9 @@ module KnifeCloudstack
         disk : #{locate_config_value(:cloudstack_disk)}
         zone : #{locate_config_value(:cloudstack_zone)}
         project: #{locate_config_value(:cloudstack_project)}
-        network: #{locate_config_value(:cloudstack_networks)}")
+        network: #{locate_config_value(:cloudstack_networks)}
+        securitygroupnames: #{locate_config_value(:cloudstack_securitygroupnames)}
+        securitygroupids: #{locate_config_value(:cloudstack_securitygroupids)}")
 
       print "\n#{ui.color("Waiting for Server to be created", :magenta)}"
       params = {}
@@ -283,6 +297,15 @@ module KnifeCloudstack
       params['displayname'] = if locate_config_value :set_display_name and locate_config_value :chef_node_name then locate_config_value :chef_node_name else hostname end
       params['ipaddress'] = locate_config_value(:ik_private_ip) if locate_config_value(:ik_private_ip)
       params['size'] = locate_config_value(:size) if locate_config_value(:size)
+
+      # Can only use one of these parameters
+      if locate_config_value(:securitygroupnames)
+        params['securitygroupnames'] = locate_config_value(:securitygroupnames)
+        params.tap { |p| p.delete(:securitygroupids) }
+      elsif locate_config_value(:securitygroupids)
+        params['securitygroupids'] = locate_config_value(:securitygroupids)
+        params.tap { |p| p.delete(:securitygroupnames) }
+      end
 
       server = connection.create_server(
           hostname,
